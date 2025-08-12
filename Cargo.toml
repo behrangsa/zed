@@ -811,6 +811,21 @@ debug = "full"
 lto = false
 codegen-units = 16
 
+# Maximum performance profile for Ryzen 5 4500U (6 cores, Zen 2 architecture)
+[profile.ryzen-max-perf]
+inherits = "release"
+opt-level = 3               # Maximum optimization
+lto = "fat"                 # Full link-time optimization for best performance
+#lto = "thin"               # Thin LTO - less memory usage, still good optimization
+codegen-units = 8           # Balanced for 6-core Ryzen (some parallelism with good optimization)
+strip = true                # Strip symbols for smaller binary
+overflow-checks = false     # Disable overflow checks in release
+incremental = false         # Disable incremental compilation for best optimization
+
+# Ryzen 5 4500U specific: Use native CPU features for Zen 2
+# Build with: cargo build --profile ryzen-max-perf
+# The target-cpu is configured below in target section
+
 [workspace.lints.rust]
 unexpected_cfgs = { level = "allow" }
 

@@ -1,0 +1,125 @@
+name: Build Ryzen Optimized Release
+
+on:
+  push:
+    branches:
+      - main
+      - "feat/ryzen2"
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: 1
+
+jobs:
+  build-ryzen-optimized:
+    name: Build Ryzen Optimized (Linux x86_64)
+    # Options for runners:
+    # - ubuntu-latest: 2 cores, 7GB RAM (free tier, slow with LTO)
+    # - ubuntu-latest-4-cores: 4 cores, 16GB RAM (requires GitHub Team/Enterprise)
+    # - ubuntu-latest-8-cores: 8 cores, 32GB RAM (requires GitHub Team/Enterprise)
+    # - ubuntu-latest-16-cores: 16 cores, 64GB RAM (requires GitHub Team/Enterprise)
+    # - buildjet-8vcpu-ubuntu-2204: 8 cores, 16GB RAM (BuildJet runner, requires subscription)
+    # - buildjet-16vcpu-ubuntu-2204: 16 cores, 32GB RAM (BuildJet runner, requires subscription)
+    # - self-hosted: Use your own runner for best performance
+    #runs-on: ubuntu-latest  # Change this based on your GitHub plan
+    runs-on: buildjet-8vcpu-ubuntu-2204  # Need more RAM for LTO
+    timeout-minutes: 180 # 3 hours timeout (LTO builds are slow on 2-core runners)
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev \
+            libfontconfig-dev \
+            libfreetype6-dev \
+            libglib2.0-dev \
+            libgtk-3-dev \
+            libpango1.0-dev \
+            libpulse-dev \
+            libssl-dev \
+            libvulkan-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            libzstd-dev \
+            mold \
+            clang
+
+      - name: Configure build
+        run: |
+          # Use environment variables instead of config file to avoid conflicts
+          echo "RUSTFLAGS=-C link-arg=-fuse-ld=mold -C target-cpu=znver2" >> $GITHUB_ENV
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build with ryzen-max-perf profile
+        run: |
+          echo "Building Zed with Ryzen 5 4500U optimizations..."
+          echo "⚠️  WARNING: This build uses aggressive optimizations (full LTO, single codegen unit)"
+          echo "   On ubuntu-latest (2 cores): expect 60-120+ minutes build time"
+          echo "   On 8+ core runners: expect 15-30 minutes build time"
+          echo ""
+          echo "Starting build at $(date)"
+          cargo build --profile ryzen-max-perf --target x86_64-unknown-linux-gnu
+          echo "Build completed at $(date)"
+
+      - name: Display binary info
+        run: |
+          echo "Build complete. Binary location:"
+          ls -lah target/ryzen-max-perf/zed || true
+          echo ""
+          echo "Binary size:"
+          du -h target/ryzen-max-perf/zed || true
+          echo ""
+          echo "File type:"
+          file target/ryzen-max-perf/zed || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zed-ryzen-optimized-${{ github.sha }}
+          path: target/ryzen-max-perf/zed
+          retention-days: 2
+
+      - name: Create tarball for release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          cd target/ryzen-max-perf
+          tar -czf zed-linux-x86_64-ryzen-optimized.tar.gz zed
+          mv zed-linux-x86_64-ryzen-optimized.tar.gz ../..
+
+      - name: Upload to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: zed-linux-x86_64-ryzen-optimized.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

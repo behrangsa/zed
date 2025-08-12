@@ -7,7 +7,14 @@ xtask = "run --package xtask --"
 
 [target.x86_64-unknown-linux-gnu]
 linker = "clang"
-rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+# Ryzen 5 4500U (Zen 2) optimization with mold linker for fast linking
+rustflags = [
+    "-C", "symbol-mangling-version=v0",
+    "--cfg", "tokio_unstable",
+    "-C", "link-arg=-fuse-ld=mold",
+    "-C", "target-cpu=znver2"
+]
+# Alternative: Use "native" for auto-detection: "-C", "target-cpu=native"
 
 [target.aarch64-unknown-linux-gnu]
 linker = "clang"
