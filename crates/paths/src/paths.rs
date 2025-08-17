@@ -9,14 +9,12 @@ pub use util::paths::home_dir;
 /// A default editorconfig file name to use when resolving project settings.
 pub const EDITORCONFIG_NAME: &str = ".editorconfig";
 
-// Application and directory name constants
 /// The application name used for directories on Windows and macOS (capitalized).
 const APP_NAME_CAPITALIZED: &str = "Zed";
 
 /// The application name used for directories on Linux and config paths (lowercase).
 const APP_NAME_LOWERCASE: &str = "zed";
 
-// Configuration file name constants
 /// Standard settings file name used across different contexts.
 const SETTINGS_JSON: &str = "settings.json";
 
@@ -26,7 +24,6 @@ const TASKS_JSON: &str = "tasks.json";
 /// Standard debug configuration file name used across different contexts.
 const DEBUG_JSON: &str = "debug.json";
 
-// Directory and path constants
 /// The local Zed configuration folder name within projects.
 const ZED_DIR: &str = ".zed";
 
