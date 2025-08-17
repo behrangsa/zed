@@ -138,7 +138,9 @@ pub fn data_dir() -> &'static PathBuf {
         if let Some(custom_dir) = CUSTOM_DATA_DIR.get() {
             custom_dir.clone()
         } else if cfg!(target_os = "macos") {
-            home_dir().join(MACOS_APP_SUPPORT).join(APP_NAME_CAPITALIZED)
+            home_dir()
+                .join(MACOS_APP_SUPPORT)
+                .join(APP_NAME_CAPITALIZED)
         } else if cfg!(any(target_os = "linux", target_os = "freebsd")) {
             if let Ok(flatpak_xdg_data) = std::env::var("FLATPAK_XDG_DATA_HOME") {
                 flatpak_xdg_data.into()
@@ -488,7 +490,7 @@ pub fn global_ssh_config_file() -> &'static Path {
 pub fn vscode_settings_file_paths() -> Vec<PathBuf> {
     let mut paths = vscode_user_data_paths();
     for path in paths.iter_mut() {
-        path.push(USER_SETTINGS_PATH);
+        path.push(USER_SETTINGS_JSON_PATH);
     }
     paths
 }
@@ -497,7 +499,7 @@ pub fn vscode_settings_file_paths() -> Vec<PathBuf> {
 pub fn cursor_settings_file_paths() -> Vec<PathBuf> {
     let mut paths = cursor_user_data_paths();
     for path in paths.iter_mut() {
-        path.push(USER_SETTINGS_PATH);
+        path.push(USER_SETTINGS_JSON_PATH);
     }
     paths
 }
@@ -535,11 +537,7 @@ fn cursor_user_data_paths() -> Vec<PathBuf> {
 
 fn add_vscode_user_data_paths(paths: &mut Vec<PathBuf>, product_name: &str) {
     if cfg!(target_os = "macos") {
-        paths.push(
-            home_dir()
-                .join(MACOS_APP_SUPPORT)
-                .join(product_name),
-        );
+        paths.push(home_dir().join(MACOS_APP_SUPPORT).join(product_name));
     } else if cfg!(target_os = "windows") {
         if let Some(data_local_dir) = dirs::data_local_dir() {
             paths.push(data_local_dir.join(product_name));
